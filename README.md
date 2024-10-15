@@ -19,6 +19,15 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser to
 * Client-side API key management for easy testing and demonstration
 * Option to easily remove stored API key for security
 
+## Configuration
+
+This demo allows you to set your OpenAI API key directly in the browser. Here's what you need to know:
+
+* The API key is stored locally in your browser using localStorage.
+* The API key is stored in plain text and is not encrypted.
+* The API key never leaves your browser or gets sent to our server.
+* You can review the open-source code to verify the handling of the API key.
+
 ## How It Works
 
 This application demonstrates real-time interaction between a user and the OpenAI Realtime API using Elixir and Phoenix. Below is a breakdown of how the frontend and backend components work together:
@@ -162,17 +171,6 @@ This application demonstrates real-time interaction between a user and the OpenA
 
 - **Error Feedback**: Errors are captured and displayed to the user, allowing for graceful handling of issues like invalid API keys or connection problems.
 - **LiveView Updates**: The LiveView process updates the UI in response to events like successful connections or errors.
-
----
-
-## Configuration
-
-This demo allows you to set your OpenAI API key directly in the browser. Here's what you need to know:
-
-* The API key is stored locally in your browser using localStorage.
-* The API key is stored in plain text and is not encrypted.
-* The API key never leaves your browser or gets sent to our server.
-* You can review the open-source code to verify the handling of the API key.
 
 ### Important Security Note
 

@@ -11,8 +11,8 @@ defmodule OpenaiRealtimeExWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  socket "/socket", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options]],
+  socket "/socket", OpenaiRealtimeExWeb.UserSocket,
+    websocket: true,
     longpoll: false
 
   socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]

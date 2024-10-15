@@ -37,6 +37,20 @@ Hooks.ApiKey = {
       const apiKey = window.openAIDemo.getApiKey();
       this.pushEvent("api_key_retrieved", { api_key: apiKey });
     });
+    this.handleEvent("connect_to_realtime", () => {
+      const apiKey = window.openAIDemo.getApiKey();
+      if (apiKey) {
+        window.openAIDemo.connectToRealtimeChannel();
+      } else {
+        this.pushEvent("api_key_not_set", {});
+      }
+    });
+
+    // Check if API key is set on mount
+    const apiKey = window.openAIDemo.getApiKey();
+    if (apiKey) {
+      this.pushEvent("api_key_stored", {});
+    }
   }
 }
 

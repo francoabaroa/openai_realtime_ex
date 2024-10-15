@@ -17,8 +17,7 @@ defmodule OpenaiRealtimeExWeb.Router do
   scope "/", OpenaiRealtimeExWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
-    live "/demo", DemoLive
+    live "/", DemoLive
   end
 
   # Other scopes may use custom stacks.

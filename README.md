@@ -42,7 +42,7 @@ Please note:
       - Open your browser's developer tools (usually F12 or right-click and select "Inspect")
       - Go to the "Application" or "Storage" tab
       - Under "Local Storage", find and select the entry for this application's domain
-      - Look for the item named "openai_api_key" and delete it
+      - Look for the item named "ex_openai_api_key" and delete it
 
 For production use or handling sensitive data, we recommend implementing more robust security measures, such as server-side API key management.
 

@@ -33,24 +33,30 @@ Hooks.ApiKey = {
       window.openAIDemo.removeApiKey();
       this.pushEvent("api_key_removed", {});
     });
-    this.handleEvent("get_api_key", () => {
-      const apiKey = window.openAIDemo.getApiKey();
-      this.pushEvent("api_key_retrieved", { api_key: apiKey });
-    });
     this.handleEvent("connect_to_realtime", () => {
-      const apiKey = window.openAIDemo.getApiKey();
-      if (apiKey) {
-        window.openAIDemo.connectToRealtimeChannel();
-      } else {
-        this.pushEvent("api_key_not_set", {});
-      }
+      window.openAIDemo.connectToRealtimeChannel();
+    });
+    this.handleEvent("disconnect_from_realtime", () => {
+      window.openAIDemo.disconnectFromRealtimeChannel();
     });
 
     // Check if API key is set on mount
-    const apiKey = window.openAIDemo.getApiKey();
-    if (apiKey) {
+    if (window.openAIDemo.getApiKey()) {
       this.pushEvent("api_key_stored", {});
     }
+
+    // Add these event listeners
+    window.addEventListener('realtime-connected', () => {
+      this.pushEvent("realtime_connected", {});
+    });
+
+    window.addEventListener('realtime-disconnected', () => {
+      this.pushEvent("realtime_disconnected", {});
+    });
+
+    window.addEventListener('realtime-connection-error', (event) => {
+      this.pushEvent("realtime_connection_error", event.detail);
+    });
   }
 }
 
@@ -75,83 +81,70 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
-// Function to store the API key
-function storeApiKey(apiKey) {
-  localStorage.setItem('ex_openai_api_key', apiKey);
-}
-
-// Function to retrieve the API key
-function getApiKey() {
-  return localStorage.getItem('ex_openai_api_key');
-}
-
-// Function to remove the API key
-function removeApiKey() {
-  localStorage.removeItem('ex_openai_api_key');
-}
-
-// Add these functions to the window object so they can be called from LiveView
+// Consolidate API key management and websocket functions under window.openAIDemo
 window.openAIDemo = {
-  storeApiKey,
-  getApiKey,
-  removeApiKey
+  // API key management functions
+  storeApiKey(apiKey) {
+    localStorage.setItem('ex_openai_api_key', apiKey);
+  },
+  getApiKey() {
+    return localStorage.getItem('ex_openai_api_key');
+  },
+  removeApiKey() {
+    localStorage.removeItem('ex_openai_api_key');
+  },
+
+  // Initialize socket and channel
+  socket: new Socket("/socket", { params: { token: window.userToken } }),
+  channel: null,
+
+  // Connect to the realtime channel
+  connectToRealtimeChannel() {
+    const apiKey = this.getApiKey();
+    if (apiKey) {
+      if (this.channel) {
+        this.channel.leave();
+      }
+      this.socket.connect();
+      this.channel = this.socket.channel("realtime:lobby", { api_key: apiKey });
+      this.channel.join()
+        .receive("ok", () => {
+          console.log("Joined successfully");
+          // Dispatch a custom event that the LiveView hook can listen for
+          window.dispatchEvent(new CustomEvent('realtime-connected'));
+        })
+        .receive("error", resp => {
+          console.error("Unable to join", resp);
+          window.dispatchEvent(new CustomEvent('realtime-connection-error', { detail: resp }));
+        });
+
+      this.channel.on("api_message", msg => {
+        console.log("Received message from OpenAI:", msg);
+        // Handle the message as needed
+      });
+    } else {
+      console.error("API key not set");
+      window.dispatchEvent(new CustomEvent('realtime-connection-error', { detail: { reason: "API key not set" } }));
+    }
+  },
+
+  // Disconnect from the realtime channel
+  disconnectFromRealtimeChannel() {
+    if (this.channel) {
+      this.channel.leave()
+        .receive("ok", () => {
+          console.log("Left the realtime channel");
+          this.channel = null;
+          // Dispatch a custom event that the LiveView hook can listen for
+          window.dispatchEvent(new CustomEvent('realtime-disconnected'));
+        })
+        .receive("error", reason => {
+          console.error("Error leaving channel", reason);
+          window.dispatchEvent(new CustomEvent('realtime-connection-error', { detail: { reason: "Error disconnecting" } }));
+        });
+    }
+  }
 };
 
-// Initialize the socket
-let socket = new Socket("/socket", { params: { token: window.userToken } })
-socket.connect()
-
-// Join the RealtimeChannel
-let channel = null;
-
-function connectToRealtimeChannel() {
-  const apiKey = window.openAIDemo.getApiKey();
-  if (apiKey) {
-    if (channel) {
-      channel.leave();  // Leave the previous channel if it exists
-    }
-    channel = socket.channel("realtime:lobby", { api_key: apiKey });
-    channel.join()
-      .receive("ok", resp => {
-        console.log("Joined successfully", resp);
-        window.dispatchEvent(new CustomEvent('phx:realtime-connected'));
-      })
-      .receive("error", resp => {
-        console.log("Unable to join", resp);
-        window.dispatchEvent(new CustomEvent('phx:realtime-connection-error', { detail: resp }));
-      });
-  } else {
-    console.error("API key not set");
-    window.dispatchEvent(new CustomEvent('phx:realtime-connection-error', { detail: { reason: "API key not set" } }));
-  }
-}
-
-function disconnectFromRealtimeChannel() {
-  if (channel) {
-    channel.leave()
-      .receive("ok", () => {
-        console.log("Left successfully");
-        channel = null;
-        window.dispatchEvent(new CustomEvent('phx:realtime-disconnected'));
-      })
-      .receive("error", (reason) => {
-        console.log("Error leaving", reason);
-        window.dispatchEvent(new CustomEvent('phx:realtime-connection-error', { detail: { reason: "Error disconnecting" } }));
-      });
-  }
-}
-
-window.openAIDemo.connectToRealtimeChannel = connectToRealtimeChannel;
-window.openAIDemo.disconnectFromRealtimeChannel = disconnectFromRealtimeChannel;
-
-// Add event listeners for connect and disconnect events
-window.addEventListener('phx:connect-to-realtime', connectToRealtimeChannel);
-window.addEventListener('phx:disconnect-from-realtime', disconnectFromRealtimeChannel);
-
-// Now you can push and handle events via the channel
-// For example:
-// channel.push("new_msg", {body: "Hello!"})
-// channel.on("new_msg", msg => console.log("Got message", msg))
-
 // Expose channel on window for debugging
-window.channel = channel
+window.channel = window.openAIDemo.channel;

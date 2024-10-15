@@ -37,7 +37,8 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
   end
 
   def handle_event("api_key_not_set", _, socket) do
-    {:noreply, assign(socket, show_api_key_message: true)}
+    # Removed handling for "api_key_not_set" as it's handled on the client side
+    {:noreply, socket}
   end
 
   def handle_event("connect_to_realtime", _, socket) do
@@ -49,18 +50,33 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
   end
 
   @impl true
+  def handle_event("realtime_connected", _, socket) do
+    {:noreply, assign(socket, connected_to_realtime: true, connection_error: nil)}
+  end
+
+  @impl true
+  def handle_event("realtime_disconnected", _, socket) do
+    {:noreply, assign(socket, connected_to_realtime: false)}
+  end
+
+  @impl true
+  def handle_event("realtime_connection_error", %{"reason" => reason}, socket) do
+    {:noreply, assign(socket, connection_error: reason)}
+  end
+
+  @impl true
   def handle_info(%{event: "realtime_connected"}, socket) do
     {:noreply, assign(socket, connected_to_realtime: true, connection_error: nil)}
   end
 
   @impl true
   def handle_info(%{event: "realtime_disconnected"}, socket) do
-    {:noreply, assign(socket, connected_to_realtime: false, connection_error: nil)}
+    {:noreply, assign(socket, connected_to_realtime: false)}
   end
 
   @impl true
   def handle_info(%{event: "realtime_connection_error", payload: %{reason: reason}}, socket) do
-    {:noreply, assign(socket, connection_error: reason, connected_to_realtime: false)}
+    {:noreply, assign(socket, connection_error: reason)}
   end
 
   @impl true
@@ -73,7 +89,7 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
         {:noreply,
          socket
          |> put_flash(:error, "API Error: #{error_message}")
-         |> assign(connected_to_realtime: false, api_key_set: false)}
+         |> assign(connected_to_realtime: false)}
 
       _ ->
         {:noreply, socket}

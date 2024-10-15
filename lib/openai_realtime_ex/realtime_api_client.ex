@@ -20,22 +20,23 @@ defmodule OpenaiRealtimeEx.RealtimeApiClient do
 
   # Handle the WebSocket connection being established
   def handle_connect(%WebSockex.Conn{} = _conn, state) do
-    Logger.info("Connected to OpenAI Realtime API")
+    Logger.info("Realtime API Client: Connected to OpenAI Realtime API")
     {:ok, state}
   end
 
   def handle_disconnect(%{reason: reason}, state) do
-    Logger.error("Disconnected from OpenAI Realtime API: #{inspect(reason)}")
+    Logger.error("Realtime API Client: Disconnected from OpenAI Realtime API: #{inspect(reason)}")
     {:ok, state}
   end
 
   def handle_frame({:text, msg}, state) do
-    Logger.info("Received message from OpenAI: #{msg}")
+    Logger.info("Realtime API Client: Received message from OpenAI: #{msg}")
     send(state.channel_pid, {:api_message, msg})
     {:ok, state}
   end
 
-  def handle_cast({:send, msg}, state) do
-    {:reply, {:text, msg}, state}
+  def terminate(_reason, _state) do
+    Logger.info("Realtime API Client: Terminating")
+    :ok
   end
 end

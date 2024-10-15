@@ -95,7 +95,7 @@ window.openAIDemo = {
   },
 
   // Initialize socket and channel
-  socket: new Socket("/socket", { params: { token: window.userToken } }),
+  socket: null,
   channel: null,
 
   // Connect to the realtime channel
@@ -105,7 +105,10 @@ window.openAIDemo = {
       if (this.channel) {
         this.channel.leave();
       }
-      this.socket.connect();
+      if (!this.socket) {
+        this.socket = new Socket("/socket", { params: { token: window.userToken } });
+        this.socket.connect();
+      }
       this.channel = this.socket.channel("realtime:lobby", { api_key: apiKey });
       this.channel.join()
         .receive("ok", () => {

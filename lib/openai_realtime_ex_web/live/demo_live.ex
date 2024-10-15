@@ -36,11 +36,6 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
      assign(socket, api_key_set: false, connected_to_realtime: false, show_api_key_message: false)}
   end
 
-  def handle_event("api_key_not_set", _, socket) do
-    # Removed handling for "api_key_not_set" as it's handled on the client side
-    {:noreply, socket}
-  end
-
   def handle_event("connect_to_realtime", _, socket) do
     {:noreply, push_event(socket, "connect_to_realtime", %{})}
   end

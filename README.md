@@ -172,7 +172,7 @@ This application demonstrates real-time interaction between a user and the OpenA
 - **Error Feedback**: Errors are captured and displayed to the user, allowing for graceful handling of issues like invalid API keys or connection problems.
 - **LiveView Updates**: The LiveView process updates the UI in response to events like successful connections or errors.
 
-### Important Security Note
+## Important Security Note
 
 Storing API keys in localStorage is not secure and is only intended for demonstration purposes. In a production environment, you should implement proper security measures to protect sensitive information.
 

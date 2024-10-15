@@ -42,9 +42,9 @@ Hooks.ApiKey = {
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
-  longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: Hooks
+  hooks: Hooks,
+  longPollFallbackMs: null // This disables long-polling
 })
 
 // Show progress bar on live navigation and form submits
@@ -82,3 +82,62 @@ window.openAIDemo = {
   getApiKey,
   removeApiKey
 };
+
+// Initialize the socket
+let socket = new Socket("/socket", { params: { token: window.userToken } })
+socket.connect()
+
+// Join the RealtimeChannel
+let channel = null;
+
+function connectToRealtimeChannel() {
+  const apiKey = window.openAIDemo.getApiKey();
+  if (apiKey) {
+    if (channel) {
+      channel.leave();  // Leave the previous channel if it exists
+    }
+    channel = socket.channel("realtime:lobby", { api_key: apiKey });
+    channel.join()
+      .receive("ok", resp => {
+        console.log("Joined successfully", resp);
+        window.dispatchEvent(new CustomEvent('phx:realtime-connected'));
+      })
+      .receive("error", resp => {
+        console.log("Unable to join", resp);
+        window.dispatchEvent(new CustomEvent('phx:realtime-connection-error', { detail: resp }));
+      });
+  } else {
+    console.error("API key not set");
+    window.dispatchEvent(new CustomEvent('phx:realtime-connection-error', { detail: { reason: "API key not set" } }));
+  }
+}
+
+function disconnectFromRealtimeChannel() {
+  if (channel) {
+    channel.leave()
+      .receive("ok", () => {
+        console.log("Left successfully");
+        channel = null;
+        window.dispatchEvent(new CustomEvent('phx:realtime-disconnected'));
+      })
+      .receive("error", (reason) => {
+        console.log("Error leaving", reason);
+        window.dispatchEvent(new CustomEvent('phx:realtime-connection-error', { detail: { reason: "Error disconnecting" } }));
+      });
+  }
+}
+
+window.openAIDemo.connectToRealtimeChannel = connectToRealtimeChannel;
+window.openAIDemo.disconnectFromRealtimeChannel = disconnectFromRealtimeChannel;
+
+// Add event listeners for connect and disconnect events
+window.addEventListener('phx:connect-to-realtime', connectToRealtimeChannel);
+window.addEventListener('phx:disconnect-from-realtime', disconnectFromRealtimeChannel);
+
+// Now you can push and handle events via the channel
+// For example:
+// channel.push("new_msg", {body: "Hello!"})
+// channel.on("new_msg", msg => console.log("Got message", msg))
+
+// Expose channel on window for debugging
+window.channel = channel

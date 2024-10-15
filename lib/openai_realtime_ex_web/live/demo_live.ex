@@ -1,5 +1,6 @@
 defmodule OpenaiRealtimeExWeb.DemoLive do
   use OpenaiRealtimeExWeb, :live_view
+  require Logger
 
   @impl true
   def mount(_params, _session, socket) do
@@ -8,10 +9,11 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
        page_title: "OpenAI Realtime Elixir Demo",
        connected_to_realtime: false,
        api_key_set: false,
-       websocket: nil
+       connection_error: nil
      )}
   end
 
+  @impl true
   def handle_event("set_api_key", %{"api_key" => api_key}, socket) do
     {:noreply, push_event(socket, "store_api_key", %{api_key: api_key})}
   end
@@ -28,30 +30,24 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
     {:noreply, assign(socket, api_key_set: false, connected_to_realtime: false)}
   end
 
-  @impl true
   def handle_event("connect_to_realtime", _, socket) do
-    case connected?(socket) do
-      true ->
-        send(self(), :connect_websocket)
-        {:noreply, assign(socket, connected_to_realtime: true)}
-
-      false ->
-        {:noreply, socket}
-    end
+    {:noreply, push_event(socket, "connect_to_realtime", %{})}
   end
 
-  @impl true
   def handle_event("disconnect_from_realtime", _, socket) do
-    if socket.assigns.websocket do
-      WebSockex.cast(socket.assigns.websocket, {:close})
-    end
-
-    {:noreply, assign(socket, connected_to_realtime: false, websocket: nil)}
+    {:noreply, push_event(socket, "disconnect_from_realtime", %{})}
   end
 
-  @impl true
-  def handle_info(:connect_websocket, socket) do
-    {:noreply, push_event(socket, "get_api_key", %{})}
+  def handle_event("realtime_connected", _, socket) do
+    {:noreply, assign(socket, connected_to_realtime: true, connection_error: nil)}
+  end
+
+  def handle_event("realtime_disconnected", _, socket) do
+    {:noreply, assign(socket, connected_to_realtime: false, connection_error: nil)}
+  end
+
+  def handle_event("realtime_connection_error", %{"reason" => reason}, socket) do
+    {:noreply, assign(socket, connection_error: reason, connected_to_realtime: false)}
   end
 
   def handle_event("api_key_retrieved", %{"api_key" => api_key}, socket) do
@@ -64,6 +60,7 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
     {:noreply, assign(socket, websocket: pid)}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="container mx-auto" id="api-key-container" phx-hook="ApiKey">
@@ -99,6 +96,11 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
           <%= if @connected_to_realtime, do: "Disconnect", else: "Connect" %>
         </button>
       </div>
+      <%= if @connection_error do %>
+        <div class="mt-4 text-red-500">
+          Connection error: <%= @connection_error %>
+        </div>
+      <% end %>
     </div>
     """
   end

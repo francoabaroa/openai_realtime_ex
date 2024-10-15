@@ -56,7 +56,7 @@ For production use or handling sensitive data, we recommend implementing more ro
 
 ## Contributing
 
-While this project is primarily a demonstration, you are welcome to fork the repository or submit pull requests if you'd like to contribute. Feel free to use and modify the code as you see fit under the terms of the license.
+While this project is primarily a demonstration, you are welcome to fork the repository or submit pull requests if you'd like to contribute. Feel free to use and modify the code as you see fit under the terms of the license. If you see something that can be improved, please don't hesitate to open an issue or submit a pull request. We appreciate your feedback and contributions!
 
 ## License
 

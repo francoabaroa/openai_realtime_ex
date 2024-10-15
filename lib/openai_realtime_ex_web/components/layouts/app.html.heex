@@ -2,11 +2,26 @@
   <div class="flex items-center justify-between border-b border-zinc-100 py-3 text-sm">
     <div class="flex items-center gap-4">
       <a href="/">
-        <img src={~p"/images/logo.svg"} width="36" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="36"
+          height="36"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-audio-lines"
+        >
+          <path d="M2 10v3" />
+          <path d="M6 6v11" />
+          <path d="M10 3v18" />
+          <path d="M14 8v7" />
+          <path d="M18 5v13" />
+          <path d="M22 10v3" />
+        </svg>
       </a>
-      <p class="bg-brand/5 text-brand rounded-full px-2 font-medium leading-6">
-        v<%= Application.spec(:phoenix, :vsn) %>
-      </p>
     </div>
     <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900">
       <a href="/" class="hover:text-zinc-700">

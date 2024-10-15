@@ -36,6 +36,10 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
      assign(socket, api_key_set: false, connected_to_realtime: false, show_api_key_message: false)}
   end
 
+  def handle_event("api_key_not_set", _, socket) do
+    {:noreply, assign(socket, show_api_key_message: true)}
+  end
+
   def handle_event("connect_to_realtime", _, socket) do
     {:noreply, push_event(socket, "connect_to_realtime", %{})}
   end
@@ -82,22 +86,18 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
     {:noreply, socket}
   end
 
-  def handle_event("api_key_not_set", _, socket) do
-    {:noreply, assign(socket, show_api_key_message: true)}
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
     <div class="container mx-auto" id="api-key-container" phx-hook="ApiKey">
       <h1 class="text-3xl font-bold mb-4">OpenAI Realtime Elixir Demo</h1>
 
-      <%= if live_flash(@flash, :error) do %>
+      <%= if Phoenix.Flash.get(@flash, :error) do %>
         <div
           class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
           role="alert"
         >
-          <span class="block sm:inline"><%= live_flash(@flash, :error) %></span>
+          <span class="block sm:inline"><%= Phoenix.Flash.get(@flash, :error) %></span>
         </div>
       <% end %>
 

@@ -112,15 +112,32 @@ Hooks.VoiceChat = {
     };
     window.addEventListener('openai-transcript-done', this.onTranscriptDone);
 
-    // Start voice chat when instructed
-    this.handleEvent("voice_chat_started", async () => {
+    const pushToTalkBtn = this.el.querySelector('#push-to-talk-btn');
+    const startRecording = async () => {
+      pushToTalkBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+      pushToTalkBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+      pushToTalkBtn.textContent = 'Recording...';
       await this.startVoiceChat();
+    };
+
+    const stopRecording = async () => {
+      pushToTalkBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+      pushToTalkBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+      pushToTalkBtn.textContent = 'Push to Talk';
+      await this.stopVoiceChat();
+    };
+
+    pushToTalkBtn.addEventListener('mousedown', startRecording);
+    pushToTalkBtn.addEventListener('mouseup', stopRecording);
+    pushToTalkBtn.addEventListener('mouseleave', stopRecording);
+
+    // Add touch events for mobile devices
+    pushToTalkBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startRecording();
     });
 
-    // Stop voice chat
-    this.handleEvent("voice_chat_stopped", async () => {
-      await this.stopVoiceChat();
-    });
+    pushToTalkBtn.addEventListener('touchend', stopRecording);
   },
 
   initializePlaybackAudioContext() {
@@ -255,32 +272,6 @@ Hooks.VoiceChat = {
     window.removeEventListener('openai-transcript-delta', this.onTranscriptDelta);
     window.removeEventListener('openai-transcript-done', this.onTranscriptDone);
   },
-}
-
-Hooks.PushToTalk = {
-  mounted() {
-    this.el.addEventListener('mousedown', () => {
-      this.pushEvent("start_recording", {});
-    });
-
-    this.el.addEventListener('mouseup', () => {
-      this.pushEvent("stop_recording", {});
-    });
-
-    this.el.addEventListener('mouseleave', () => {
-      this.pushEvent("stop_recording", {});
-    });
-
-    // Add touch events for mobile devices
-    this.el.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      this.pushEvent("start_recording", {});
-    });
-
-    this.el.addEventListener('touchend', () => {
-      this.pushEvent("stop_recording", {});
-    });
-  }
 }
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")

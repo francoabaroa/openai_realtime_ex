@@ -15,7 +15,7 @@
         <%= if @connected_to_realtime do %>
           <button
             phx-click="disconnect_from_realtime"
-            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out"
+            class="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-md transition duration-150 ease-in-out"
           >
             Disconnect
           </button>
@@ -45,16 +45,10 @@
     <div id="voice-chat" phx-hook="VoiceChat" class="mt-6">
       <div class="flex space-x-4 mb-4">
         <button
-          phx-click="voice_chat_started"
+          id="push-to-talk-btn"
           class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex-1 transition duration-150 ease-in-out"
         >
-          Start Recording
-        </button>
-        <button
-          phx-click="voice_chat_stopped"
-          class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md flex-1 transition duration-150 ease-in-out"
-        >
-          Stop Recording
+          Push to Talk
         </button>
       </div>
       <div

@@ -63,14 +63,6 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
     {:noreply, assign(socket, connection_error: reason)}
   end
 
-  def handle_event("voice_chat_started", _params, socket) do
-    {:noreply, push_event(socket, "voice_chat_started", %{})}
-  end
-
-  def handle_event("voice_chat_stopped", _params, socket) do
-    {:noreply, push_event(socket, "voice_chat_stopped", %{})}
-  end
-
   @impl true
   def handle_info(
         %Phoenix.Socket.Broadcast{event: "api_message", payload: %{message: message}},

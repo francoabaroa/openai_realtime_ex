@@ -114,16 +114,16 @@ Hooks.VoiceChat = {
 
     const pushToTalkBtn = this.el.querySelector('#push-to-talk-btn');
     const startRecording = async () => {
+      await this.startVoiceChat();
       pushToTalkBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
       pushToTalkBtn.classList.add('bg-red-600', 'hover:bg-red-700');
       pushToTalkBtn.textContent = 'Recording...';
-      await this.startVoiceChat();
     };
 
     const stopRecording = async () => {
       pushToTalkBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
       pushToTalkBtn.classList.add('bg-green-500', 'hover:bg-green-600');
-      pushToTalkBtn.textContent = 'Push to Talk';
+      pushToTalkBtn.textContent = 'Hold to Talk';
       await this.stopVoiceChat();
     };
 
@@ -177,11 +177,13 @@ Hooks.VoiceChat = {
   },
 
   async startRecording() {
+    const pushToTalkBtn = this.el.querySelector('#push-to-talk-btn');
     if (!this.isRecording) {
       await this.recorder.record(({ mono }) => {
-        const base64Audio = btoa(
-          String.fromCharCode.apply(null, new Uint8Array(mono))
-        );
+        pushToTalkBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+        pushToTalkBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        pushToTalkBtn.textContent = 'Recording...';
+        const base64Audio = this.arrayBufferToBase64(mono);
         window.openAIDemo.channel.push("send_audio_chunk", { audio: base64Audio });
       });
       this.isRecording = true;
@@ -194,6 +196,12 @@ Hooks.VoiceChat = {
       window.openAIDemo.channel.push("commit_audio", {});
       this.isRecording = false;
     }
+  },
+
+  arrayBufferToBase64(buffer) {
+    return btoa(String.fromCharCode.apply(null,
+      Uint8Array.from(new Uint8Array(buffer), x => x)
+    ));
   },
 
   enqueueAudio(int16Array) {

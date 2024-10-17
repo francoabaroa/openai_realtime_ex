@@ -9,6 +9,8 @@ export class WavRecorder {
     this.isRecording = false;
     this.onDataCallback = null;
     this.recordedChunks = [];
+    this.processor = null;
+    this.source = null;
   }
 
   async record(onData) {
@@ -105,6 +107,13 @@ export class WavRecorder {
       this.source.connect(this.processor);
       // Do not connect the processor to the destination to avoid feedback
 
+      if (this.processor) {
+        // Restart recording if already initialized
+        this.isRecording = true;
+        this.processor.port.postMessage({ command: 'start' });
+        return;
+      }
+
       // Start recording
       this.isRecording = true;
       this.processor.port.postMessage({ command: 'start' });
@@ -118,12 +127,11 @@ export class WavRecorder {
     if (this.processor) {
       // Stop recording on the processor
       this.processor.port.postMessage({ command: 'stop' });
+      this.processor.disconnect();
+      this.processor = null;
     }
     if (this.stream) {
       this.stream.getTracks().forEach((track) => track.stop());
-    }
-    if (this.processor) {
-      this.processor.disconnect();
     }
     if (this.source) {
       this.source.disconnect();
@@ -136,6 +144,12 @@ export class WavRecorder {
     const view = new DataView(buffer);
 
     // Write WAV header
+    const writeString = (view, offset, string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + dataLength, true);
     writeString(view, 8, 'WAVE');
@@ -160,11 +174,5 @@ export class WavRecorder {
     }
 
     return new Blob([buffer], { type: 'audio/wav' });
-  }
-}
-
-function writeString(view, offset, string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
   }
 }

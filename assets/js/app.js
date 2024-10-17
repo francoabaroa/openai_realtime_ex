@@ -46,18 +46,27 @@ Hooks.ApiKey = {
       this.pushEvent("api_key_stored", {});
     }
 
-    // Add these event listeners
-    window.addEventListener('realtime-connected', () => {
+    // Store event handlers as properties to allow for removal
+    this.onRealtimeConnected = () => {
       this.pushEvent("realtime_connected", {});
-    });
+    };
+    window.addEventListener('realtime-connected', this.onRealtimeConnected);
 
-    window.addEventListener('realtime-disconnected', () => {
+    this.onRealtimeDisconnected = () => {
       this.pushEvent("realtime_disconnected", {});
-    });
+    };
+    window.addEventListener('realtime-disconnected', this.onRealtimeDisconnected);
 
-    window.addEventListener('realtime-connection-error', (event) => {
+    this.onRealtimeConnectionError = (event) => {
       this.pushEvent("realtime_connection_error", event.detail);
-    });
+    };
+    window.addEventListener('realtime-connection-error', this.onRealtimeConnectionError);
+  },
+  destroyed() {
+    // Remove event listeners to prevent memory leaks
+    window.removeEventListener('realtime-connected', this.onRealtimeConnected);
+    window.removeEventListener('realtime-disconnected', this.onRealtimeDisconnected);
+    window.removeEventListener('realtime-connection-error', this.onRealtimeConnectionError);
   }
 }
 
@@ -76,37 +85,32 @@ Hooks.VoiceChat = {
     this.isPlaying = false;
     this.currentSource = null;
 
-    // Event listener for audio delta
-    window.addEventListener('openai-audio-delta', (event) => {
+    // Store event handlers as properties
+    this.onAudioDelta = (event) => {
       const audioData = event.detail.audioData;
       this.enqueueAudio(audioData);
-    });
+    };
+    window.addEventListener('openai-audio-delta', this.onAudioDelta);
 
-    // Event listeners for transcript delta and done
-    window.addEventListener('openai-transcript-delta', (event) => {
+    this.onTranscriptDelta = (event) => {
       const deltaText = event.detail.deltaText;
-      // Update the transcript in the UI
-      if (!this.transcript) {
-        this.transcript = '';
-      }
-      this.transcript += deltaText;
-
+      this.transcript = (this.transcript || '') + deltaText;
       const transcriptElement = document.querySelector('#transcript');
       if (transcriptElement) {
         transcriptElement.textContent = this.transcript;
       }
-    });
+    };
+    window.addEventListener('openai-transcript-delta', this.onTranscriptDelta);
 
-    window.addEventListener('openai-transcript-done', (event) => {
+    this.onTranscriptDone = (event) => {
       const transcriptText = event.detail.transcriptText;
-      // Finalize the transcript
       this.transcript = transcriptText;
-
       const transcriptElement = document.querySelector('#transcript');
       if (transcriptElement) {
         transcriptElement.textContent = this.transcript;
       }
-    });
+    };
+    window.addEventListener('openai-transcript-done', this.onTranscriptDone);
 
     // Start voice chat when instructed
     this.handleEvent("voice_chat_started", async () => {
@@ -246,6 +250,10 @@ Hooks.VoiceChat = {
       // If there's any other cleanup needed, do it here
     }
     this.closePlaybackAudioContext();
+    // Remove event listeners to prevent memory leaks
+    window.removeEventListener('openai-audio-delta', this.onAudioDelta);
+    window.removeEventListener('openai-transcript-delta', this.onTranscriptDelta);
+    window.removeEventListener('openai-transcript-done', this.onTranscriptDone);
   },
 }
 

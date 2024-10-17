@@ -95,6 +95,7 @@ export class WavStreamPlayer {
     }
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close();
+      this.audioContext = null; // Set to null after closing
     }
   }
 

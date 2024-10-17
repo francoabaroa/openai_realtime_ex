@@ -27,7 +27,6 @@ defmodule OpenaiRealtimeExWeb.RealtimeChannel do
     Logger.info("Realtime Channel: Terminating")
 
     if api_client = socket.assigns[:api_client] do
-      # Properly stop the API client process
       Process.exit(api_client, :normal)
     end
 
@@ -39,6 +38,25 @@ defmodule OpenaiRealtimeExWeb.RealtimeChannel do
   def handle_info({:api_message, message}, socket) do
     Logger.info("Realtime Channel: Received message from OpenAI: #{message}")
     push(socket, "api_message", %{message: message})
+    {:noreply, socket}
+  end
+
+  # Handle incoming events from the client
+  @impl true
+  def handle_in("send_audio_chunk", %{"audio" => base64_audio}, socket) do
+    if api_client = socket.assigns[:api_client] do
+      send(api_client, {:send_audio_chunk, base64_audio})
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_in("commit_audio", _params, socket) do
+    if api_client = socket.assigns[:api_client] do
+      send(api_client, :commit_audio)
+    end
+
     {:noreply, socket}
   end
 end

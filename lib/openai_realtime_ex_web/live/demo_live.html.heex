@@ -1,66 +1,67 @@
-<div class="container mx-auto" id="api-key-container" phx-hook="ApiKey">
-  <h1 class="text-3xl font-bold mb-4">OpenAI Realtime Elixir Demo</h1>
-
+<div class="bg-white shadow-md rounded-lg p-6">
   <%= if Phoenix.Flash.get(@flash, :error) do %>
     <div
-      class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+      class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4"
       role="alert"
     >
       <span class="block sm:inline"><%= Phoenix.Flash.get(@flash, :error) %></span>
     </div>
   <% end %>
 
-  <div class="mb-4">
+  <div class="mb-6">
     <%= if @api_key_set do %>
-      <p>API Key is set</p>
-      <button phx-click="remove_api_key" class="bg-red-500 text-white px-4 py-2 rounded">
-        Remove API Key
-      </button>
+      <div class="flex items-center justify-between">
+        <span class="text-green-600 font-medium">API Key is set</span>
+        <%= if @connected_to_realtime do %>
+          <button
+            phx-click="disconnect_from_realtime"
+            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out"
+          >
+            Disconnect
+          </button>
+        <% else %>
+          <button
+            phx-click="connect_to_realtime"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-150 ease-in-out"
+          >
+            Connect
+          </button>
+        <% end %>
+      </div>
     <% else %>
-      <form phx-submit="set_api_key">
-        <input
-          type="password"
-          name="api_key"
-          placeholder="Enter your OpenAI API Key"
-          class="border p-2 mr-2"
-        />
-        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">
-          Set API Key
-        </button>
-      </form>
+      <p class="text-yellow-600 font-medium">
+        Please set your OpenAI API Key in the header to begin.
+      </p>
     <% end %>
   </div>
-  <%= if @api_key_set do %>
-    <div>
-      <%= if @connected_to_realtime do %>
-        <button
-          phx-click="disconnect_from_realtime"
-          class="bg-red-500 text-white px-4 py-2 rounded"
-        >
-          Disconnect
-        </button>
-      <% else %>
-        <button phx-click="connect_to_realtime" class="bg-blue-500 text-white px-4 py-2 rounded">
-          Connect
-        </button>
-      <% end %>
-    </div>
-  <% end %>
+
   <%= if @connection_error do %>
-    <div class="mt-4 text-red-500">
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4">
       Connection error: <%= @connection_error %>
     </div>
   <% end %>
+
   <%= if @connected_to_realtime do %>
-    <div id="voice-chat" phx-hook="VoiceChat">
-      <button phx-click="voice_chat_started" class="bg-blue-500 text-white px-4 py-2 rounded">
-        Start Recording
-      </button>
-      <button phx-click="voice_chat_stopped" class="bg-red-500 text-white px-4 py-2 rounded">
-        Stop Recording
-      </button>
-      <!-- Move the transcript inside the voice-chat div -->
-      <div id="transcript"></div>
+    <div id="voice-chat" phx-hook="VoiceChat" class="mt-6">
+      <div class="flex space-x-4 mb-4">
+        <button
+          phx-click="voice_chat_started"
+          class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex-1 transition duration-150 ease-in-out"
+        >
+          Start Recording
+        </button>
+        <button
+          phx-click="voice_chat_stopped"
+          class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md flex-1 transition duration-150 ease-in-out"
+        >
+          Stop Recording
+        </button>
+      </div>
+      <div
+        id="transcript"
+        class="bg-gray-100 p-4 rounded-md min-h-[200px] max-h-[400px] overflow-y-auto"
+      >
+      </div>
     </div>
   <% end %>
 </div>

@@ -33,7 +33,11 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
 
   def handle_event("api_key_removed", _, socket) do
     {:noreply,
-     assign(socket, api_key_set: false, connected_to_realtime: false, show_api_key_message: false)}
+     assign(socket,
+       api_key_set: false,
+       connected_to_realtime: false,
+       show_api_key_message: false
+     )}
   end
 
   def handle_event("connect_to_realtime", _, socket) do
@@ -59,19 +63,12 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
     {:noreply, assign(socket, connection_error: reason)}
   end
 
-  @impl true
-  def handle_info(%{event: "realtime_connected"}, socket) do
-    {:noreply, assign(socket, connected_to_realtime: true, connection_error: nil)}
+  def handle_event("voice_chat_started", _params, socket) do
+    {:noreply, push_event(socket, "voice_chat_started", %{})}
   end
 
-  @impl true
-  def handle_info(%{event: "realtime_disconnected"}, socket) do
-    {:noreply, assign(socket, connected_to_realtime: false)}
-  end
-
-  @impl true
-  def handle_info(%{event: "realtime_connection_error", payload: %{reason: reason}}, socket) do
-    {:noreply, assign(socket, connection_error: reason)}
+  def handle_event("voice_chat_stopped", _params, socket) do
+    {:noreply, push_event(socket, "voice_chat_stopped", %{})}
   end
 
   @impl true
@@ -98,62 +95,7 @@ defmodule OpenaiRealtimeExWeb.DemoLive do
   end
 
   @impl true
-  def render(assigns) do
-    ~H"""
-    <div class="container mx-auto" id="api-key-container" phx-hook="ApiKey">
-      <h1 class="text-3xl font-bold mb-4">OpenAI Realtime Elixir Demo</h1>
-
-      <%= if Phoenix.Flash.get(@flash, :error) do %>
-        <div
-          class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
-          role="alert"
-        >
-          <span class="block sm:inline"><%= Phoenix.Flash.get(@flash, :error) %></span>
-        </div>
-      <% end %>
-
-      <div class="mb-4">
-        <%= if @api_key_set do %>
-          <p>API Key is set</p>
-          <button phx-click="remove_api_key" class="bg-red-500 text-white px-4 py-2 rounded">
-            Remove API Key
-          </button>
-        <% else %>
-          <form phx-submit="set_api_key">
-            <input
-              type="password"
-              name="api_key"
-              placeholder="Enter your OpenAI API Key"
-              class="border p-2 mr-2"
-            />
-            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">
-              Set API Key
-            </button>
-          </form>
-        <% end %>
-      </div>
-      <%= if @api_key_set do %>
-        <div>
-          <%= if @connected_to_realtime do %>
-            <button
-              phx-click="disconnect_from_realtime"
-              class="bg-red-500 text-white px-4 py-2 rounded"
-            >
-              Disconnect
-            </button>
-          <% else %>
-            <button phx-click="connect_to_realtime" class="bg-blue-500 text-white px-4 py-2 rounded">
-              Connect
-            </button>
-          <% end %>
-        </div>
-      <% end %>
-      <%= if @connection_error do %>
-        <div class="mt-4 text-red-500">
-          Connection error: <%= @connection_error %>
-        </div>
-      <% end %>
-    </div>
-    """
+  def terminate(_reason, _socket) do
+    :ok
   end
 end

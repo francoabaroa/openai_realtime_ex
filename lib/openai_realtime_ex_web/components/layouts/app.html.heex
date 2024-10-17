@@ -1,7 +1,7 @@
-<header class="px-4 sm:px-6 lg:px-8">
-  <div class="flex items-center justify-between border-b border-zinc-100 py-3 text-sm">
+<header class="px-4 sm:px-6 lg:px-8 bg-gray-100">
+  <div class="flex items-center justify-between py-3 text-sm">
     <div class="flex items-center gap-4">
-      <a href="/">
+      <a href="/" class="flex items-center gap-2 text-xl font-semibold text-gray-900">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="36"
@@ -12,7 +12,7 @@
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="lucide lucide-audio-lines"
+          class="text-blue-500"
         >
           <path d="M2 10v3" />
           <path d="M6 6v11" />
@@ -21,10 +21,36 @@
           <path d="M18 5v13" />
           <path d="M22 10v3" />
         </svg>
+        OpenAI Realtime Elixir Demo
       </a>
     </div>
-    <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900">
-      <a href="https://github.com/francoabaroa/openai_realtime_ex" class="hover:text-zinc-700">
+    <div class="flex items-center gap-4">
+      <div id="api-key-container" phx-hook="ApiKey" class="mr-4">
+        <%= if @api_key_set do %>
+          <button phx-click="remove_api_key" class="text-red-600 hover:text-red-800 font-medium">
+            Remove API Key
+          </button>
+        <% else %>
+          <form phx-submit="set_api_key" class="flex items-center">
+            <input
+              type="password"
+              name="api_key"
+              placeholder="OpenAI API Key"
+              class="border border-gray-300 rounded-l px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              class="bg-blue-500 text-white px-3 py-1 rounded-r text-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Set
+            </button>
+          </form>
+        <% end %>
+      </div>
+      <a
+        href="https://github.com/francoabaroa/openai_realtime_ex"
+        class="text-gray-600 hover:text-gray-900"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -43,8 +69,8 @@
     </div>
   </div>
 </header>
-<main class="px-4 py-20 sm:px-6 lg:px-8">
-  <div class="mx-auto max-w-2xl">
+<main class="px-4 py-8 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
+  <div class="mx-auto max-w-3xl">
     <.flash_group flash={@flash} />
     <%= @inner_content %>
   </div>

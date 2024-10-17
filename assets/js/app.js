@@ -21,6 +21,7 @@ import "phoenix_html"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+import { WavRecorder } from '../vendor/wav_recorder.js';
 
 let Hooks = {}
 Hooks.ApiKey = {
@@ -60,11 +61,225 @@ Hooks.ApiKey = {
   }
 }
 
+Hooks.VoiceChat = {
+  async mounted() {
+    console.log("VoiceChat hook mounted");
+    this.recorder = new WavRecorder({ sampleRate: 24000 });
+    this.isRecording = false;
+    this.audioChunks = [];
+    this.receivedAudioChunks = [];
+    this.voiceChatStopped = false;
+
+    // Initialize audio contexts and playback variables
+    this.initializePlaybackAudioContext();
+    this.audioQueue = [];
+    this.isPlaying = false;
+    this.currentSource = null;
+
+    // Event listener for audio delta
+    window.addEventListener('openai-audio-delta', (event) => {
+      const audioData = event.detail.audioData;
+      this.enqueueAudio(audioData);
+    });
+
+    // Event listeners for transcript delta and done
+    window.addEventListener('openai-transcript-delta', (event) => {
+      const deltaText = event.detail.deltaText;
+      // Update the transcript in the UI
+      if (!this.transcript) {
+        this.transcript = '';
+      }
+      this.transcript += deltaText;
+
+      const transcriptElement = document.querySelector('#transcript');
+      if (transcriptElement) {
+        transcriptElement.textContent = this.transcript;
+      }
+    });
+
+    window.addEventListener('openai-transcript-done', (event) => {
+      const transcriptText = event.detail.transcriptText;
+      // Finalize the transcript
+      this.transcript = transcriptText;
+
+      const transcriptElement = document.querySelector('#transcript');
+      if (transcriptElement) {
+        transcriptElement.textContent = this.transcript;
+      }
+    });
+
+    // Start voice chat when instructed
+    this.handleEvent("voice_chat_started", async () => {
+      await this.startVoiceChat();
+    });
+
+    // Stop voice chat
+    this.handleEvent("voice_chat_stopped", async () => {
+      await this.stopVoiceChat();
+    });
+  },
+
+  initializePlaybackAudioContext() {
+    if (!this.playbackAudioContext || this.playbackAudioContext.state === 'closed') {
+      // Initialize playbackAudioContext
+      this.playbackAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+      // Create the gain node for volume control
+      this.gainNode = this.playbackAudioContext.createGain();
+      this.gainNode.connect(this.playbackAudioContext.destination);
+      console.log("Playback AudioContext initialized");
+    }
+  },
+
+  async startVoiceChat() {
+    console.log("Starting voice chat");
+    try {
+      this.voiceChatStopped = false;
+      await this.startRecording();
+    } catch (error) {
+      console.error("Error starting voice chat:", error);
+      this.pushEvent("voice_chat_error", { message: "Failed to start voice chat" });
+    }
+  },
+
+  async stopVoiceChat() {
+    if (this.isRecording) {
+      await this.stopRecording();
+    }
+    // Set a flag to indicate that voice chat is stopped
+    this.voiceChatStopped = true;
+    // Check if audio is still playing
+    if (!this.isPlaying && this.audioQueue.length === 0) {
+      // No audio is playing and queue is empty, safe to close
+      this.closePlaybackAudioContext();
+    }
+    // Else, playbackAudioContext will be closed after playback finishes
+  },
+
+  async startRecording() {
+    if (!this.isRecording) {
+      await this.recorder.record(({ mono }) => {
+        const base64Audio = btoa(
+          String.fromCharCode.apply(null, new Uint8Array(mono))
+        );
+        window.openAIDemo.channel.push("send_audio_chunk", { audio: base64Audio });
+      });
+      this.isRecording = true;
+    }
+  },
+
+  async stopRecording() {
+    if (this.isRecording) {
+      await this.recorder.pause();
+      window.openAIDemo.channel.push("commit_audio", {});
+      this.isRecording = false;
+    }
+  },
+
+  enqueueAudio(int16Array) {
+    if (!this.playbackAudioContext || this.playbackAudioContext.state === 'closed') {
+      console.warn("Playback AudioContext is not available. Initializing it now.");
+      this.initializePlaybackAudioContext();
+    }
+
+    // Convert Int16Array to Float32Array
+    const float32Array = new Float32Array(int16Array.length);
+    for (let i = 0; i < int16Array.length; i++) {
+      float32Array[i] = int16Array[i] / 32768;
+    }
+
+    // Create AudioBuffer
+    const audioBuffer = this.playbackAudioContext.createBuffer(
+      1,
+      float32Array.length,
+      24000
+    );
+    audioBuffer.copyToChannel(float32Array, 0);
+
+    // Enqueue the audio buffer
+    this.audioQueue.push(audioBuffer);
+
+    // Start playback if not already playing
+    if (!this.isPlaying) {
+      this.playAudioQueue();
+    }
+  },
+
+  playAudioQueue() {
+    if (this.audioQueue.length === 0) {
+      this.isPlaying = false;
+      if (this.voiceChatStopped) {
+        // Voice chat has been stopped and no more audio to play
+        this.closePlaybackAudioContext();
+      }
+      return;
+    }
+
+    this.isPlaying = true;
+    const audioBuffer = this.audioQueue.shift();
+
+    const source = this.playbackAudioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(this.gainNode);
+
+    source.onended = () => {
+      this.isPlaying = false;
+      this.playAudioQueue();
+    };
+
+    source.start(0);
+  },
+
+  closePlaybackAudioContext() {
+    if (this.playbackAudioContext && this.playbackAudioContext.state !== 'closed') {
+      this.playbackAudioContext.close();
+      this.playbackAudioContext = null;
+      console.log("Playback AudioContext closed");
+    }
+  },
+
+  destroyed() {
+    if (this.recorder) {
+      // Check if the recorder has a stop method
+      if (typeof this.recorder.stop === 'function') {
+        this.recorder.stop();
+      }
+      // If there's any other cleanup needed, do it here
+    }
+    this.closePlaybackAudioContext();
+  },
+}
+
+Hooks.PushToTalk = {
+  mounted() {
+    this.el.addEventListener('mousedown', () => {
+      this.pushEvent("start_recording", {});
+    });
+
+    this.el.addEventListener('mouseup', () => {
+      this.pushEvent("stop_recording", {});
+    });
+
+    this.el.addEventListener('mouseleave', () => {
+      this.pushEvent("stop_recording", {});
+    });
+
+    // Add touch events for mobile devices
+    this.el.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.pushEvent("start_recording", {});
+    });
+
+    this.el.addEventListener('touchend', () => {
+      this.pushEvent("stop_recording", {});
+    });
+  }
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
   hooks: Hooks,
-  longPollFallbackMs: null // This disables long-polling
+  longPollFallbackMs: null
 })
 
 // Show progress bar on live navigation and form submits
@@ -76,9 +291,6 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 liveSocket.connect()
 
 // expose liveSocket on window for web console debug logs and latency simulation:
-// >> liveSocket.enableDebug()
-// >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
-// >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
 // Consolidate API key management and websocket functions under window.openAIDemo
@@ -113,7 +325,6 @@ window.openAIDemo = {
       this.channel.join()
         .receive("ok", () => {
           console.log("Joined successfully");
-          // Dispatch a custom event that the LiveView hook can listen for
           window.dispatchEvent(new CustomEvent('realtime-connected'));
         })
         .receive("error", resp => {
@@ -121,9 +332,46 @@ window.openAIDemo = {
           window.dispatchEvent(new CustomEvent('realtime-connection-error', { detail: resp }));
         });
 
+      // Handle events from the server
+      this.channel.on("audio_delta", msg => {
+        console.log("Received audio delta:", msg);
+        // This event is now handled in the VoiceChat hook
+      });
+
+      // Handle API errors
+      this.channel.on("api_error", msg => {
+        console.error("API Error:", msg.error);
+        // Display error to the user if needed
+      });
+
       this.channel.on("api_message", msg => {
         console.log("Received message from OpenAI:", msg);
-        // Handle the message as needed
+        const messageData = JSON.parse(msg.message);
+        const eventType = messageData.type;
+
+        if (eventType === 'response.audio.delta') {
+          console.log("Received audio delta:", messageData);
+          // Handle audio delta
+          const deltaBase64 = messageData.delta;
+          const audioData = new Int16Array(
+            Uint8Array.from(atob(deltaBase64), c => c.charCodeAt(0)).buffer
+          );
+          window.dispatchEvent(new CustomEvent('openai-audio-delta', { detail: { audioData } }));
+        } else if (eventType === 'response.audio_transcript.delta') {
+          console.log("Received transcript delta:", messageData);
+          // Handle transcript delta
+          const deltaText = messageData.delta;
+          window.dispatchEvent(new CustomEvent('openai-transcript-delta', { detail: { deltaText } }));
+        } else if (eventType === 'response.audio_transcript.done') {
+          console.log("Received transcript done:", messageData);
+          // Handle transcript completion
+          const transcriptText = messageData.transcript;
+          window.dispatchEvent(new CustomEvent('openai-transcript-done', { detail: { transcriptText } }));
+        } else if (eventType === 'response.audio.done') {
+          console.log("Received audio done:", messageData);
+          window.dispatchEvent(new CustomEvent('openai-audio-done'));
+        }
+        // ... handle other message types as needed ...
       });
     } else {
       console.error("API key not set");
